@@ -50,49 +50,71 @@ st.markdown("Search and explore **112,000+ story plots** from Wikipedia using a 
 st.divider()
 
 # Loading data with progress bar
-with st.spinner("Building BST from dataset... (this takes ~10 seconds on first load)"):
-    bst = build_tree(limit=None)  # Change to limit=5000 for faster testing
+with st.spinner("Building BST from dataset..."):
+    start_time = time.time()
+    bst = build_tree(limit=None) 
+    build_time = time.time() - start_time
 
-st.success(f"✅ BST ready — {bst.size:,} stories loaded.")
+col1, col2, col3 = st.columns(3)
+col1.metric("✅ Stories Loaded", f"{bst.size:,}")
+col2.metric("⏱️ Build Time", f"{build_time:.3f}s")
+col3.metric("📐 Data Structure", "Binary Search Tree")
 
 # Sidebar Navigation
 st.sidebar.title("Navigation")
 page = st.sidebar.radio(
     "Choose a feature:",
-    ["🔍 Search by Title",
+    ["🔍 Search Stories",
      "🔤 Browse Alphabetically",
-     "🔎 Search by Prefix",
      "📅 Filter by Year",
      "🗑️ Delete a Story",
      "📊 BST Balance Report"]
 )
 
 # =========================================================
-# PAGE 1: Search by Title
+# PAGE 1: Search (Exact + Prefix combined)
 # =========================================================
-if page == "🔍 Search by Title":
-    st.header("🔍 Search by Exact Title")
-    st.markdown("Enter a story title to retrieve its full plot summary.")
+if page == "🔍 Search Stories":
+    st.header("🔍 Search Stories")
+    st.markdown("Search by full title or just the first few letters.")
 
-    query = st.text_input("Enter title (case-insensitive):", placeholder="e.g. titanic")
+    query = st.text_input("Enter a title or prefix:", placeholder="e.g. star  or  the godfather")
 
     if query:
+        # Try exact match first 
         start = time.time()
-        result = bst.search(query)
+        exact = bst.search(query)
         elapsed = time.time() - start
 
-        if result:
-            st.success(f"Found in **{elapsed:.6f}s**")
-            col1, col2 = st.columns([2, 1])
+        if exact:
+            # Found an exact match — show it prominently
+            st.success(f"Exact match found in **{elapsed:.6f}s**")
+            col1, col2 = st.columns([3, 1])
             with col1:
-                st.subheader(result.title)
+                st.subheader(exact.title)
             with col2:
-                st.metric("Year", result.year if result.year else "Unknown")
+                st.metric("Year", exact.year if exact.year else "Unknown")
+            with st.expander("📄 Full Plot Summary", expanded=True):
+                st.write(exact.plot if exact.plot else "No plot available.")
+            st.divider()
 
-            with st.expander("📄 View Full Plot Summary", expanded=True):
-                st.write(result.plot if result.plot else "No plot available.")
-        else:
-            st.error("Story not found. Try lowercase, e.g. `the godfather`")
+        # Also running prefix search to show related titles
+        prefix_results = bst.prefix_search(query)
+
+        # Remove exact match from prefix results to avoid duplicate
+        if exact:
+            prefix_results = [s for s in prefix_results if s.title != exact.title]
+
+        if prefix_results:
+            st.markdown(f"#### 📚 {len(prefix_results)} other titles starting with **'{query}'**")
+            for story in prefix_results[:30]:
+                with st.expander(f"📘 {story.title}  ({story.year or 'N/A'})"):
+                    st.write(story.plot[:500] + "..." if len(story.plot) > 500 else story.plot)
+            if len(prefix_results) > 30:
+                st.warning(f"Showing first 30 of {len(prefix_results)} prefix results.")
+
+        if not exact and not prefix_results:
+            st.error("No stories found. Try a shorter prefix or check your spelling.")
 
 # =========================================================
 # PAGE 2: Browse Alphabetically
@@ -122,28 +144,7 @@ elif page == "🔤 Browse Alphabetically":
             st.write(story.year if story.year else "—")
 
 # =========================================================
-# PAGE 3: Search by Prefix
-# =========================================================
-elif page == "🔎 Search by Prefix":
-    st.header("🔎 Search by Title Prefix")
-    st.markdown("Type the first few letters of a title to find all matching stories.")
-
-    prefix = st.text_input("Enter prefix:", placeholder="e.g. star")
-
-    if prefix:
-        results = bst.prefix_search(prefix)
-        st.info(f"Found **{len(results)}** stories starting with **'{prefix}'**")
-
-        if results:
-            for story in results[:50]:
-                with st.expander(f"📘 {story.title}  ({story.year or 'N/A'})"):
-                    st.write(story.plot[:500] + "..." if len(story.plot) > 500 else story.plot)
-
-            if len(results) > 50:
-                st.warning(f"Showing first 50 of {len(results)} results.")
-
-# =========================================================
-# PAGE 4: Filter by Year
+# PAGE 3: Filter by Year
 # =========================================================
 elif page == "📅 Filter by Year":
     st.header("📅 Filter Stories by Year")
@@ -170,7 +171,7 @@ elif page == "📅 Filter by Year":
                 st.warning(f"Showing first 50 of {len(results)} results.")
 
 # =========================================================
-# PAGE 5: Delete a Story
+# PAGE 4: Delete a Story
 # =========================================================
 elif page == "🗑️ Delete a Story":
     st.header("🗑️ Delete a Story")
@@ -193,7 +194,7 @@ elif page == "🗑️ Delete a Story":
             st.error("Story not found.")
 
 # =========================================================
-# PAGE 6: BST Balance Report
+# PAGE 5: BST Balance Report
 # =========================================================
 elif page == "📊 BST Balance Report":
     st.header("📊 BST Balance Report")
