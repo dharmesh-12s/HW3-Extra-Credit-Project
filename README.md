@@ -147,4 +147,4 @@ These limitations are documented and demonstrated in the **BST Balance Report** 
 
 ## Course
 
-MSML606 — Data Structures and Algorithms
+MSML606 — Algorithms and Data Structures for Machine Learning
