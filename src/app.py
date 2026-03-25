@@ -180,18 +180,28 @@ elif page == "🗑️ Delete a Story":
     del_query = st.text_input("Enter title to delete (case-insensitive):", placeholder="e.g. titanic")
 
     if del_query:
+        # Normalize the input the same way BST keys are stored
+        normalized = del_query.strip().lower()
+
         # Preview before deleting
-        preview = bst.search(del_query)
+        preview = bst.search(normalized)
         if preview:
             st.warning(f"Found: **{preview.title}** ({preview.year or 'Unknown'})")
             if st.button("Confirm Delete"):
-                success = bst.delete(del_query)
+                success = bst.delete(normalized)
                 if success:
                     st.success(f"Deleted '{preview.title}'. Tree now has {bst.size:,} stories.")
                 else:
                     st.error("Deletion failed.")
         else:
+            # Help the user by showing close prefix matches
+            suggestions = bst.prefix_search(normalized[:4]) if len(normalized) >= 4 else []
             st.error("Story not found.")
+            if suggestions:
+                st.info("Did you mean one of these?")
+                for s in suggestions[:5]:
+                    st.write(f"  • {s.title}")
+
 
 # =========================================================
 # PAGE 5: BST Balance Report
