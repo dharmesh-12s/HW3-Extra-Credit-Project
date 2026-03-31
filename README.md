@@ -1,7 +1,3 @@
-# HW3 Extra Credit Project
-
---- 
-
 # WikiPlots BST Search Engine
 
 This is a story search and indexing application built using a **Binary Search Tree (BST)**,
